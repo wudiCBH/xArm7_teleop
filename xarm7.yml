@@ -1,0 +1,14 @@
+robot_cfg:
+  name: xarm7
+  urdf_path: xarm7_robot.urdf #xarm7_with_gripper.urdf
+  dof_num: 13
+  arm_indices: [0, 1, 2, 3, 4, 5, 6]
+  arm_init: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  ee: link_eef
+  wrist_low_pass_alpha: 0.5
+
+  arm:
+    dt:  1e-1
+    eps: 1e-4
+    damp: 1e-12
+    out_lp_alpha: 0.5
