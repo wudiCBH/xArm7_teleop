@@ -21,7 +21,9 @@ class xArm7Controller:
         if cfg is None:
             raise ValueError("Need to provide a config file.")
 
-        self.default_urdf_dir = "."
+        src_dir = Path(__file__).resolve().parent
+        project_root = src_dir.parent
+        self.default_urdf_dir = project_root / "assets"
         self.debug = debug
 
         self.dof = cfg["dof_num"]

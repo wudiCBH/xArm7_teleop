@@ -8,8 +8,10 @@ import pytransform3d.transformations as ptf
 from controller import xArm7Controller
 
 def load_config(config_file_name: str) -> Dict[str, Any]:
+    src_dir = Path(__file__).resolve().parent
+    project_root = src_dir.parent
     robot_config_path = (
-        f"." / Path(config_file_name)
+        project_root /'configs'/ Path(config_file_name)
     )
     with Path(robot_config_path).open("r") as f:
         cfg = yaml.safe_load(f)["robot_cfg"]
@@ -36,7 +38,7 @@ class xArm7Teleop:
 
 
 def main():
-    config_file_name = "./xarm7.yml"
+    config_file_name = "xarm7.yml"
     cfg = load_config(config_file_name)
     debug = True
 

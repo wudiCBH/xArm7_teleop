@@ -1,16 +1,16 @@
-#xRAM7
+#xRAM7_Sim.py
 
 import argparse
 from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(
-    description="This script demonstrates adding a custom robot to an Isaac Lab environment."
+    description="This script demonstrates adding a xArm7 to an Isaac Lab environment."
 )
 parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 parser.add_argument("--debuginfo", type=bool, default=False, help="Whether to print important debug information")
-parser.add_argument("--myinfo", type=bool, default=False, help="Whether to print important information")
-parser.add_argument("--configfile", type=str, default="./xarm7.yml", help="Yaml file for configuration")
+parser.add_argument("--myinfo", type=bool, default=True, help="Whether to print important information")
+parser.add_argument("--configfile", type=str, default="xarm7.yml", help="Yaml file for configuration")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
@@ -23,6 +23,9 @@ from teleop import xArm7Teleop, load_config
 config_file_name = args_cli.configfile
 cfg = load_config(config_file_name)
 Teleop = xArm7Teleop(cfg, debug)
+
+if info:
+    print("[INFO] Initialize Teleop successfully!")
 
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
@@ -80,6 +83,12 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, tel
 
         target_ee_pose = np.array([np.deg2rad(180.0), np.deg2rad(0.0), np.deg2rad(0.0)] + circle_pos)
 
+        ##TODO: Add a keyboard controller send target information
+
+
+
+
+
         # target_ee_pose = np.array([np.deg2rad(180.0), np.deg2rad(0.0), np.deg2rad(0.0), 0.206, 0.0, 0.1205])
         cmd = teleop.step(target_ee_pose)
         joint_pos = torch.tensor(cmd)
@@ -114,7 +123,8 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, tel
             circle_pos_list = np.array(circle_pos_list)
             circle_pos_list = np.transpose(circle_pos_list, (1,0))
             time_list = np.array(time_list)
-            print(f"[INFO] ee_cur_pose_list shape is {ee_cur_pose_list.shape}, circle_pos_list shape is {circle_pos_list.shape}, time_list shape is {time_list.shape}")
+            if info:
+                print(f"[INFO] ee_cur_pose_list shape is {ee_cur_pose_list.shape}, circle_pos_list shape is {circle_pos_list.shape}, time_list shape is {time_list.shape}")
 
             plt.figure(figsize=(12,4))
 
@@ -159,7 +169,7 @@ def main():
 
     if info:
         print(f"[INFO] ISAAC_NUCLEUS_DIR is {ISAAC_NUCLEUS_DIR}")
-        print("[INFO]: Setup complete...")
+        print("[INFO]: Isaac Sim Setup complete...")
 
     run_simulator(sim, scene, Teleop, debug, info)
 
