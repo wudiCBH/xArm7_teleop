@@ -1,0 +1,15 @@
+build/
+install/
+log/
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.swp
+*.swo
+*.egg-info/
+dist/
+.eggs/
+*.egg
+*.log
+*.db3
