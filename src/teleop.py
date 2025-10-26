@@ -5,7 +5,7 @@ import yaml
 import pytransform3d.rotations as prt
 import pytransform3d.transformations as ptf
 
-from controller import xArm7Controller
+from ik.controller import XArm7Controller
 
 def load_config(config_file_name: str) -> Dict[str, Any]:
     src_dir = Path(__file__).resolve().parent
@@ -20,7 +20,7 @@ def load_config(config_file_name: str) -> Dict[str, Any]:
 
 class xArm7Teleop:
     def __init__(self, cfg: Dict[str, Any], debug: bool = False):
-        self.controller = xArm7Controller(cfg, debug)
+        self.controller = XArm7Controller(cfg, debug)
         self.debug = debug
 
     def step(self,target_ee_pose) -> Tuple[List[float], Any]:

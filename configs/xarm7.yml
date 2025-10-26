@@ -1,9 +1,11 @@
 robot_cfg:
   name: xarm7
-  urdf_path: xarm7_robot.urdf #xarm7_with_gripper.urdf
+  urdf_path: /home/binghong/project/xArm7_teleop/assets/xarm7_with_gripper.urdf #xarm7_with_gripper.urdf
   dof_num: 13
+  joint_names: ["joint1","joint2","joint3","joint4","joint5","joint6","joint7"]
   arm_indices: [0, 1, 2, 3, 4, 5, 6]
-  arm_init: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  # arm_init: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  arm_init: [0.435, -0.17, 2.085, 1.018, 0.0, 0.0, 0.801]
   ee: link_eef
   wrist_low_pass_alpha: 0.5
 

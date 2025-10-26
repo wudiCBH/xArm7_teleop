@@ -35,6 +35,8 @@ import numpy as np
 import torch
 import math
 import matplotlib.pyplot as plt
+import pytransform3d.rotations as pr
+import pytransform3d.transformations as pt
 
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
@@ -64,50 +66,53 @@ class NewRobotsSceneCfg(InteractiveSceneCfg):
     robot = robot_asset_CONFIG
     xArm7 = xARM_7_CONFIG
 
+def plot_tracking_xyz_rpy():
+    pass
+
 def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, teleop: xArm7Teleop, debug: bool, info: bool):
     sim_dt = sim.get_physics_dt()
     sim_time = 0.0
     account = 0
     circle_angular_velocity = 0.3
-    ee_cur_pose_list = []
-    circle_pos_list = []
+    ee_cur_pos_list = []
+    # ee_cur_quat_list = []
+    ee_cur_rpy_list = []
+    target_pos_list = []
+    target_rpy_list = []
     time_list = []
 
     while simulation_app.is_running():
-        
         #Define a circle target
         radius = 0.1
-        center = [0.306, 0.0, 0.1205]
-        circle_pos = [center[0] + radius * np.cos(circle_angular_velocity * sim_time + np.pi), \
+        center = [0.306, 0.0, 0.2705]
+        target_pos = [center[0] + radius * np.cos(circle_angular_velocity * sim_time + np.pi), \
                     center[1] + radius * np.sin(circle_angular_velocity * sim_time + np.pi), center[2]]
+        target_rpy = [np.deg2rad(180.0), np.deg2rad(0.0), np.deg2rad(0.0)] # roll pitch yaw
+        target_ee_pose = np.array(target_rpy + target_pos)
 
-        target_ee_pose = np.array([np.deg2rad(180.0), np.deg2rad(0.0), np.deg2rad(0.0)] + circle_pos)
-
-        ##TODO: Add a keyboard controller send target information
-
-
-
-
-
-        # target_ee_pose = np.array([np.deg2rad(180.0), np.deg2rad(0.0), np.deg2rad(0.0), 0.206, 0.0, 0.1205])
         cmd = teleop.step(target_ee_pose)
         joint_pos = torch.tensor(cmd)
 
         if debug:
             print(f"[Debug] Command is {joint_pos}")
 
-        scene["xArm7"].write_joint_position_to_sim(joint_pos)
-        joint_cur_pos = scene["xArm7"].data.joint_pos.clone()
+        scene["xArm7"].set_joint_position_target(joint_pos)
+        joint_angle = scene["xArm7"].data.joint_pos.clone() #
         ee_cur_pose = scene["xArm7"].data.body_link_state_w.clone()[:,7,:] #(1,15,13),(env_num,link_num,state_dim) the ee link is in the 8th, here state_dim contain[pos,quat,vel,ang_vel]
+        ee_cur_pose = ee_cur_pose.to("cpu").numpy().squeeze()[:7] #(13,)
+        ee_cur_pos = ee_cur_pose[:3] #(3,)
+        ee_cur_quat = ee_cur_pose[3:] #(4,)
+        ee_cur_rpy = pr.euler_from_quaternion(ee_cur_quat, 0, 1, 2, False) #(3,)
 
         if account % 10 == 0:
-
-            ee_cur_pose_list.append(ee_cur_pose.to("cpu"))
-            circle_pos_list.append(circle_pos)
+            target_pos_list.append(target_pos)
+            target_rpy_list.append(target_rpy)
+            ee_cur_pos_list.append(ee_cur_pos)
+            ee_cur_rpy_list.append(ee_cur_rpy)
             time_list.append(sim_time)
         
         if debug:
-            print(f"[Debug] Joint Current Pos is {joint_cur_pos}")
+            print(f"[Debug] Joint Current Pos is {joint_angle}")
             print(f"[Debug] EE Current Pose is {ee_cur_pose}")
 
         scene.write_data_to_sim()
@@ -116,36 +121,57 @@ def run_simulator(sim: sim_utils.SimulationContext, scene: InteractiveScene, tel
         account += 1
         scene.update(sim_dt)
 
-        if sim_time >= 30:
-            ee_cur_pose_list = np.array(ee_cur_pose_list)
-            ee_cur_pose_list = np.squeeze(ee_cur_pose_list, axis=1)
-            ee_cur_pose_list = np.transpose(ee_cur_pose_list, (1,0))
-            circle_pos_list = np.array(circle_pos_list)
-            circle_pos_list = np.transpose(circle_pos_list, (1,0))
+        if sim_time >= 10:
+            target_pos_list = np.array(target_pos_list).transpose((1,0)) # (3, t)
+            target_rpy_list = np.array(target_rpy_list).transpose((1,0)) # (3, t)
+            ee_cur_pos_list = np.array(ee_cur_pos_list).transpose((1,0)) # (3, t)
+            ee_cur_rpy_list = np.array(ee_cur_rpy_list).transpose((1,0)) # (3, t)
             time_list = np.array(time_list)
             if info:
-                print(f"[INFO] ee_cur_pose_list shape is {ee_cur_pose_list.shape}, circle_pos_list shape is {circle_pos_list.shape}, time_list shape is {time_list.shape}")
+                print(f"[INFO] target_pos_list shape is {target_pos_list.shape}, target_rpy_list shape is {target_rpy_list.shape},\
+                     ee_cur_pos_list shape is {ee_cur_pos_list.shape}, ee_cur_rpy_list shape is {ee_cur_rpy_list.shape}")
 
-            plt.figure(figsize=(12,4))
+            plt.figure(figsize=(12,10))
 
-            plt.subplot(1,3,1)
-            plt.plot(time_list, ee_cur_pose_list[0], color='red', label='ee_pose')
-            plt.plot(time_list, circle_pos_list[0], color='blue', label='circle_pos')
+            plt.subplot(2,3,1)
+            plt.plot(time_list, target_pos_list[0], color='red', label='target_pos')
+            plt.plot(time_list, ee_cur_pos_list[0], color='blue', label='ee_pos')
             plt.title("X_tracking")
             plt.legend()
             plt.grid(True)
 
-            plt.subplot(1,3,2)
-            plt.plot(time_list, ee_cur_pose_list[1], color='red', label='ee_pose')
-            plt.plot(time_list, circle_pos_list[1], color='blue', label='circle_pos')
+            plt.subplot(2,3,2)
+            plt.plot(time_list, target_pos_list[1], color='red', label='target_pos')
+            plt.plot(time_list, ee_cur_pos_list[1], color='blue', label='ee_pos')
             plt.title("Y_tracking")
             plt.legend()
             plt.grid(True)
 
-            plt.subplot(1,3,3)
-            plt.plot(time_list, ee_cur_pose_list[2], color='red', label='ee_pose')
-            plt.plot(time_list, circle_pos_list[2], color='blue', label='circle_pos')
+            plt.subplot(2,3,3)
+            plt.plot(time_list, target_pos_list[2], color='red', label='target_pos')
+            plt.plot(time_list, ee_cur_pos_list[2], color='blue', label='ee_pos')
             plt.title("Z_tracking")
+            plt.legend()
+            plt.grid(True)
+
+            plt.subplot(2,3,4)
+            plt.plot(time_list, target_rpy_list[0], color='red', label='target_rpy')
+            plt.plot(time_list, ee_cur_rpy_list[0], color='blue', label='ee_rpy')
+            plt.title("Roll_tracking")
+            plt.legend()
+            plt.grid(True)
+
+            plt.subplot(2,3,5)
+            plt.plot(time_list, target_rpy_list[1], color='red', label='target_rpy')
+            plt.plot(time_list, ee_cur_rpy_list[1], color='blue', label='ee_rpy')
+            plt.title("Pitch_tracking")
+            plt.legend()
+            plt.grid(True)
+
+            plt.subplot(2,3,6)
+            plt.plot(time_list, target_rpy_list[2], color='red', label='target_rpy')
+            plt.plot(time_list, ee_cur_rpy_list[2], color='blue', label='ee_rpy')
+            plt.title("Yaw_tracking")
             plt.legend()
             plt.grid(True)
 
